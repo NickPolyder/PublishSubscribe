@@ -8,7 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\MessagingService\MessagingService.csproj" />
+    <ProjectReference Include="..\..\MessagingService\PublishSubscribe.csproj" />
   </ItemGroup>
+
 
 </Project>
