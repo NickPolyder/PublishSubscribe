@@ -7,12 +7,12 @@ using PublishSubscribe.Message;
 
 namespace PublishSubscribe
 {
-    public class MessagingService
+    public class MessagingService : IMessagingService
     {
         private static readonly object Lock = new object();
         private static volatile MessagingService _instance;
 
-        public static MessagingService Instance
+        public static IMessagingService Instance
         {
             get
             {
@@ -31,7 +31,7 @@ namespace PublishSubscribe
         private readonly ConcurrentDictionary<string, List<IMessageItem>> _subscribers =
             new ConcurrentDictionary<string, List<IMessageItem>>();
 
-
+        ///<inheritdoc />
         public void Send(string message)
         {
             var subscribers = GetSubscribersFromMessage(message);
@@ -44,6 +44,7 @@ namespace PublishSubscribe
             }
         }
 
+        ///<inheritdoc />
         public async Task SendAsync(string message)
         {
             var subscribers = GetSubscribersFromMessage(message);
@@ -53,7 +54,8 @@ namespace PublishSubscribe
             await Task.WhenAll(subscribers.OfType<IMessageItemWithoutArgs>().Select(sub => sub.ExecuteAsync()));
         }
 
-        public void Send<TArg>(string message, TArg args)
+        ///<inheritdoc />
+        public void Send<TArg>(string message, TArg payload)
         {
             var subscribers = GetSubscribersFromMessage(message);
 
@@ -63,29 +65,22 @@ namespace PublishSubscribe
             {
                 if (subscriber is IMessageItem<TArg> subscriberWithPayload)
                 {
-                    subscriberWithPayload.Execute(args);
+                    subscriberWithPayload.Execute(payload);
                 }
             }
         }
 
-        public async Task SendAsync<TArg>(string message, TArg args)
+        ///<inheritdoc />
+        public async Task SendAsync<TArg>(string message, TArg payload)
         {
             var subscribers = GetSubscribersFromMessage(message);
 
             if (subscribers.Count <= 0) return;
 
-            await Task.WhenAll(subscribers.OfType<IMessageItem<TArg>>().Select(sub => sub.ExecuteAsync(args)));
+            await Task.WhenAll(subscribers.OfType<IMessageItem<TArg>>().Select(sub => sub.ExecuteAsync(payload)));
         }
 
-        private List<IMessageItem> GetSubscribersFromMessage(string message)
-        {
-            if (_subscribers.TryGetValue(message, out List<IMessageItem> subscribers))
-            {
-                return subscribers;
-            }
-            return new List<IMessageItem>();
-        }
-
+        ///<inheritdoc />
         public void Subscribe(string message, Action callback)
         {
             if (callback == null) throw new ArgumentNullException(nameof(callback));
@@ -94,6 +89,7 @@ namespace PublishSubscribe
             AddSubscriber(message, messageItem);
         }
 
+        ///<inheritdoc />
         public void Subscribe<TArg>(string message, Action<TArg> callback)
         {
             if (callback == null) throw new ArgumentNullException(nameof(callback));
@@ -116,5 +112,15 @@ namespace PublishSubscribe
                 _subscribers.TryAdd(message, new List<IMessageItem>() { messageItem });
             }
         }
+
+        private List<IMessageItem> GetSubscribersFromMessage(string message)
+        {
+            if (_subscribers.TryGetValue(message, out List<IMessageItem> subscribers))
+            {
+                return subscribers;
+            }
+            return new List<IMessageItem>();
+        }
+
     }
 }
